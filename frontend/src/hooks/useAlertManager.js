@@ -107,16 +107,30 @@ export default function useAlertManager(lastMessage) {
 
   const dismiss = useCallback(() => setCurrentAlert(null), []);
 
+  // Keep a ref to the latest overall posture status (GOOD, MODERATE, BAD)
+  const latestOverallStatusRef = useRef('UNKNOWN');
+
   useEffect(() => {
     if (!lastMessage) return;
     const payload = lastMessage.payload;
     if (!payload || typeof payload !== 'object') return;
+
+    // Update the latest overall posture status from any message that carries it
+    if (payload.posture_evaluation && typeof payload.posture_evaluation.overall_status === 'string') {
+      latestOverallStatusRef.current = payload.posture_evaluation.overall_status;
+      // Clear any existing alert if posture is no longer BAD to prevent stale notification UI
+      if (latestOverallStatusRef.current !== 'BAD' && currentAlert) {
+        setCurrentAlert(null);
+      }
+    }
 
     if (lastMessage.type === 'ALERT') {
       const { timestamp, alert_type, posture } = payload;
       if (timestamp == null) return;
       const id = `${alert_type || posture || ''}-${timestamp}`;
       if (lastAlertIdRef.current === id) return;
+      // Only proceed if the current overall status is BAD
+      if (latestOverallStatusRef.current !== 'BAD') return;
       lastAlertIdRef.current = id;
       setCurrentAlert(payload);
 
