@@ -1,0 +1,15 @@
+numpy==2.4.4
+pandas==3.0.1
+scikit-learn==1.8.0
+joblib==1.5.3
+matplotlib==3.10.8
+mediapipe==0.10.33
+opencv-contrib-python==5.0.0.93
+fastapi==0.115.0
+uvicorn==0.30.6
+SQLAlchemy[asyncio]==2.0.30
+pymysql==1.1.1
+aiosqlite==0.20.0
+aiomysql==0.2.0
+websockets==17.1
+

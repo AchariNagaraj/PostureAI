@@ -1,0 +1,57 @@
+=== TRAIN ===
+Accuracy : 1.0000
+Precision: 1.0000
+Recall   : 1.0000
+F1‑score : 1.0000
+
+              precision    recall  f1-score   support
+
+         TLB       1.00      1.00      1.00       211
+         TLF       1.00      1.00      1.00      1574
+         TLL       1.00      1.00      1.00       270
+         TLR       1.00      1.00      1.00       270
+         TUP       1.00      1.00      1.00      1119
+
+    accuracy                           1.00      3444
+   macro avg       1.00      1.00      1.00      3444
+weighted avg       1.00      1.00      1.00      3444
+
+
+=== VALIDATION ===
+Accuracy : 0.9963
+Precision: 0.9964
+Recall   : 0.9963
+F1‑score : 0.9963
+
+              precision    recall  f1-score   support
+
+         TLB       1.00      1.00      1.00        77
+         TLF       0.97      1.00      0.99        38
+         TLL       1.00      1.00      1.00        30
+         TLR       1.00      1.00      1.00        30
+         TUP       1.00      0.99      0.99        95
+
+    accuracy                           1.00       270
+   macro avg       0.99      1.00      1.00       270
+weighted avg       1.00      1.00      1.00       270
+
+
+=== TEST ===
+Accuracy : 0.9759
+Precision: 0.9775
+Recall   : 0.9759
+F1‑score : 0.9751
+
+              precision    recall  f1-score   support
+
+         TLB       0.99      1.00      1.00       154
+         TLF       0.93      1.00      0.96       285
+         TLL       1.00      0.80      0.89       120
+         TLR       1.00      1.00      1.00       120
+         TUP       1.00      1.00      1.00       401
+
+    accuracy                           0.98      1080
+   macro avg       0.98      0.96      0.97      1080
+weighted avg       0.98      0.98      0.98      1080
+
+

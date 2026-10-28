@@ -1,0 +1,137 @@
+{
+  "train": {
+    "split": "train",
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "classification_report": "              precision    recall  f1-score   support\n\n         TLB       1.00      1.00      1.00       211\n         TLF       1.00      1.00      1.00      1574\n         TLL       1.00      1.00      1.00       270\n         TLR       1.00      1.00      1.00       270\n         TUP       1.00      1.00      1.00      1119\n\n    accuracy                           1.00      3444\n   macro avg       1.00      1.00      1.00      3444\nweighted avg       1.00      1.00      1.00      3444\n",
+    "confusion_matrix": [
+      [
+        211,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1574,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        270,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        270,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1119
+      ]
+    ]
+  },
+  "validation": {
+    "split": "validation",
+    "accuracy": 0.9962962962962963,
+    "precision": 0.9963912630579296,
+    "recall": 0.9962962962962963,
+    "f1": 0.9963105481624001,
+    "classification_report": "              precision    recall  f1-score   support\n\n         TLB       1.00      1.00      1.00        77\n         TLF       0.97      1.00      0.99        38\n         TLL       1.00      1.00      1.00        30\n         TLR       1.00      1.00      1.00        30\n         TUP       1.00      0.99      0.99        95\n\n    accuracy                           1.00       270\n   macro avg       0.99      1.00      1.00       270\nweighted avg       1.00      1.00      1.00       270\n",
+    "confusion_matrix": [
+      [
+        77,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        38,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        30,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        30,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        94
+      ]
+    ]
+  },
+  "test": {
+    "split": "test",
+    "accuracy": 0.975925925925926,
+    "precision": 0.9774626251910524,
+    "recall": 0.975925925925926,
+    "f1": 0.9751074988246377,
+    "classification_report": "              precision    recall  f1-score   support\n\n         TLB       0.99      1.00      1.00       154\n         TLF       0.93      1.00      0.96       285\n         TLL       1.00      0.80      0.89       120\n         TLR       1.00      1.00      1.00       120\n         TUP       1.00      1.00      1.00       401\n\n    accuracy                           0.98      1080\n   macro avg       0.98      0.96      0.97      1080\nweighted avg       0.98      0.98      0.98      1080\n",
+    "confusion_matrix": [
+      [
+        154,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        284,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        23,
+        96,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        120,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        400
+      ]
+    ]
+  }
+}

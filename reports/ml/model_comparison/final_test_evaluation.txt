@@ -1,0 +1,22 @@
+FINAL HELD-OUT TEST (subjects 1,9,12)
+Accuracy: 0.9769
+Macro Precision: 0.9832
+Macro Recall: 0.9605
+Macro F1: 0.9695
+Weighted Precision: 0.9784
+Weighted Recall: 0.9769
+Weighted F1: 0.9761
+
+Per‑class metrics:
+  TLB: precision 0.994, recall 1.000, f1 0.997
+  TLF: precision 0.925, recall 0.996, f1 0.959
+  TLL: precision 1.000, recall 0.808, f1 0.894
+  TLR: precision 1.000, recall 1.000, f1 1.000
+  TUP: precision 0.998, recall 0.998, f1 0.998
+
+Confusion Matrix (rows = true, cols = pred):
+[[154   0   0   0   0]
+ [  0 284   0   0   1]
+ [  0  23  97   0   0]
+ [  0   0   0 120   0]
+ [  1   0   0   0 400]]

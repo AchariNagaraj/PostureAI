@@ -1,0 +1,33 @@
+{
+  "selected_model": "RandomForest",
+  "reason": "Highest mean macro F1 (tie\u2011broken by weighted F1)",
+  "seed": 42,
+  "feature_cols": [
+    "head_pitch",
+    "head_roll",
+    "forward_head_displacement",
+    "torso_pitch",
+    "torso_lateral_tilt",
+    "torso_rotation",
+    "shoulder_asymmetry",
+    "upper_arm_elevation"
+  ],
+  "target_col": "upperbody_label",
+  "development_subjects": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    10,
+    11,
+    13
+  ],
+  "final_test_subjects": [
+    1,
+    9,
+    12
+  ]
+}
