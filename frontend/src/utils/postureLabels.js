@@ -106,6 +106,7 @@ export function get3StatePosture(posture, riskLevel, temporalState, postureEvalu
   const state = (temporalState || riskLevel || '').toUpperCase();
   const evalStatus = postureEvaluation?.overall_status;
 
+  // 1️⃣ Active risk or alert forces BAD irrespective of rule‑based evaluation
   if (state === 'ACTIVE_RISK' || state === 'ALERT') {
     return {
       status: 'BAD',
@@ -117,6 +118,7 @@ export function get3StatePosture(posture, riskLevel, temporalState, postureEvalu
     };
   }
 
+  // 2️⃣ Use rule‑based evaluation as source of truth
   if (evalStatus === 'BAD') {
     return {
       status: 'BAD',
@@ -128,7 +130,7 @@ export function get3StatePosture(posture, riskLevel, temporalState, postureEvalu
     };
   }
 
-  if (evalStatus === 'MODERATE' || state === 'WATCH' || state === 'RECOVERING' || state === 'COOLDOWN') {
+  if (evalStatus === 'MODERATE') {
     return {
       status: 'MODERATE',
       label: 'MODERATE',
@@ -139,6 +141,7 @@ export function get3StatePosture(posture, riskLevel, temporalState, postureEvalu
     };
   }
 
+  // 3️⃣ Default GOOD when rule‑based evaluation is GOOD; temporal states are informational only
   return {
     status: 'GOOD',
     label: 'GOOD',
@@ -148,6 +151,7 @@ export function get3StatePosture(posture, riskLevel, temporalState, postureEvalu
     description: 'Good posture (head straight, trunk straight, shoulder aligned).',
   };
 }
+
 
 
 
