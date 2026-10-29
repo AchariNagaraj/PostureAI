@@ -357,8 +357,8 @@ export default function PoseOverlay({
         smoothedPtsRef.current = [];
       }
 
-      // --- IN-FEED DIAGNOSTIC HUD OVERLAY ---
-      if (posture || viewpoint || riskLevel || trackingState) {
+      // --- IN-FEED DIAGNOSTIC HUD OVERLAY (debug mode) ---
+      if (debugMode && (posture || viewpoint || riskLevel || trackingState)) {
         const hudX = offsetX + 18;
         const hudY = offsetY + 28;
         const lineH = 22;

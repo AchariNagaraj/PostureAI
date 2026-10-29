@@ -62,7 +62,12 @@ export default function TargetSelector({
                   {cand.is_target && <span className="ml-2 text-[10px] text-cyan-400 font-mono">(Previously Locked)</span>}
                 </div>
                 <button
-                  onClick={() => onSelectTarget && onSelectTarget(cand.temp_id)}
+                  onClick={() => {
+                    if (cand.is_target && onChangeTarget) {
+                      onChangeTarget(); // Reset tracking before continuing
+                    }
+                    onSelectTarget && onSelectTarget(cand.temp_id);
+                  }}
                   className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg text-xs transition shadow-sm"
                 >
                   {cand.is_target ? 'Continue Monitoring' : 'Select & Monitor'}

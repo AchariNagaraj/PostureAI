@@ -126,7 +126,10 @@ class InferenceEngine:
         # -----------------------------------------------------------------
         if is_calibrating:
             if landmarks is not None and pose_valid is not False:
-                self.calibration.add_sample(landmarks, pose_valid=True)
+                # Diagnostic logging for calibration sample collection
+                accepted = self.calibration.add_sample(landmarks, pose_valid=True)
+                import logging
+                logging.getLogger('calibration').debug(f'Calibration sample added: {accepted}, total={self.calibration.sample_count}')
 
             # Evaluate posture rules WITHOUT calibration baseline (informational only)
             posture_eval = evaluate_posture_rules(landmarks, calibration=None)
