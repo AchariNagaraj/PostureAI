@@ -11,6 +11,7 @@ from ..persistence import service as persistence_service
 from ..persistence.db import engine as db_engine, Base
 from .analytics_router import router as analytics_router
 from .auth_router import router as auth_router, signer
+from ..persistence.service import ConflictError
 
 app = FastAPI()
 app.include_router(analytics_router)
@@ -58,6 +59,7 @@ async def websocket_endpoint(websocket: WebSocket, mode: str = "auto"):
     engine = InferenceEngine()
     pose_processor = PoseProcessor()
     target_tracker = TargetTracker()
+    websocket.session_id = None
 
 
     try:
@@ -104,6 +106,36 @@ async def websocket_endpoint(websocket: WebSocket, mode: str = "auto"):
                 break
             msg_type = message.get("type")
 
+            # ----------------------------------------------------------
+            # Session control messages
+            # ----------------------------------------------------------
+            if msg_type == "START_SESSION":
+                request_id = message.get("request_id")
+                try:
+                    session_id = await persistence_service.start_session(user_id=user_id, request_id=request_id)
+                    websocket.session_id = session_id
+                    await websocket.send_json({"type": "SESSION_STARTED", "session_id": session_id})
+                except ConflictError as e:
+                    await websocket.send_json({"type": "SESSION_CONFLICT", "message": str(e)})
+                continue
+            elif msg_type == "RESUME_SESSION":
+                sess_id = message.get("session_id")
+                if not sess_id:
+                    await websocket.send_json({"type": "ERROR", "message": "session_id required"})
+                    continue
+                try:
+                    valid_id = await persistence_service.resume_session(user_id=user_id, session_id=int(sess_id))
+                    websocket.session_id = valid_id
+                    await websocket.send_json({"type": "SESSION_RESUMED", "session_id": valid_id})
+                except Exception as e:
+                    await websocket.send_json({"type": "ERROR", "message": str(e)})
+                continue
+            elif msg_type == "STOP_MONITORING":
+                if websocket.session_id is not None:
+                    await persistence_service.close_session(user_id=user_id, session_id=websocket.session_id)
+                    await websocket.send_json({"type": "SESSION_CLOSED", "session_id": websocket.session_id})
+                    websocket.session_id = None
+                continue
             # ----------------------------------------------------------
             # Calibration protocol messages
             # ----------------------------------------------------------
@@ -252,7 +284,7 @@ async def websocket_endpoint(websocket: WebSocket, mode: str = "auto"):
 
                 # Non-blocking persistence — skip during calibration
                 if not is_calibrating:
-                    asyncio.create_task(persistence_service.persist_event(event_type, payload, user_id=user_id))
+                    asyncio.create_task(persistence_service.persist_event(event_type, payload, user_id=user_id, session_id=websocket.session_id))
                 await websocket.send_json({"type": event_type, "payload": payload})
 
             elif msg_type == "DEMO":

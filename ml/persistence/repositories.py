@@ -10,15 +10,7 @@ from . import models
 
 # ---------- Session handling ----------
 async def create_session(db: AsyncSession, start_ts: float, user_id: int | None = None) -> models.Session:
-    # Auto-complete any existing active sessions for this user before launching new session
-    stmt = select(models.Session).where(models.Session.status == "ACTIVE")
-    if user_id is not None:
-        stmt = stmt.where(models.Session.user_id == user_id)
-    active_sessions = (await db.execute(stmt)).scalars().all()
-    for s in active_sessions:
-        s.status = "COMPLETED"
-        if not s.end_timestamp:
-            s.end_timestamp = start_ts
+    """Create a new ACTIVE session without touching existing sessions."""
     session = models.Session(start_timestamp=start_ts, user_id=user_id, status="ACTIVE")
     db.add(session)
     await db.commit()
@@ -113,3 +105,11 @@ async def get_alerts_for_session(db: AsyncSession, session_id: int | None = None
     return result.scalars().all()
 
 
+
+# Helper to fetch an ACTIVE session for a user
+async def get_active_session(db: AsyncSession, user_id: int | None = None) -> models.Session | None:
+    stmt = select(models.Session).where(models.Session.status == "ACTIVE")
+    if user_id is not None:
+        stmt = stmt.where(models.Session.user_id == user_id)
+    result = await db.execute(stmt)
+    return result.scalars().first()

@@ -39,6 +39,7 @@ class TemporalRiskEngine:
     def __init__(self, config: TemporalRiskConfig | None = None):
         self.cfg = config or TemporalRiskConfig()
         self._reset_state()
+        self._current_eval_status = None
         # Internal accumulators
         self._last_timestamp: Optional[float] = None
         self._alert_event: Optional[Dict[str, Any]] = None
@@ -72,13 +73,18 @@ class TemporalRiskEngine:
                 confidence = 1.0
 
         raw_risk = self.cfg.risk_mapping.get(label, 0.0) * confidence
-
         # Incorporate derived rule-based posture evidence (head tilt, shoulder misalignment, trunk tilt)
         eval_status = posture_evaluation.get("overall_status") if posture_evaluation else None
         if eval_status == "BAD":
             raw_risk = max(raw_risk, 0.95)
         elif eval_status == "MODERATE":
             raw_risk = max(raw_risk, 0.45)
+        # Store current ergonomic evaluation for later use in state updates
+        self._current_eval_status = eval_status
+        # Reset timer if posture is not BAD to avoid lingering accumulation
+        if eval_status != "BAD":
+            self._risky_start_ts = None
+
 
         # Continuous temporal accumulation based on elevated risk threshold
         if raw_risk >= self.cfg.risk_threshold:
@@ -98,6 +104,8 @@ class TemporalRiskEngine:
 
         if event is not None:
             self._alert_event = event
+        # Update previous evaluation status after handling event
+        self._prev_eval_status = getattr(self, "_current_eval_status", None)
         return event
 
     # ---------------------------------------------------------------------
@@ -110,6 +118,8 @@ class TemporalRiskEngine:
         self._stable_start_ts: Optional[float] = None
         self._cooldown_end_ts: Optional[float] = None
         self._in_cooldown = False
+        # Track previous ergonomic evaluation status to manage timer resets
+        self._prev_eval_status: Optional[str] = None
         self._alert_event = None
 
     def _handle_invalid_state(self, timestamp: float, invalid_state: str):
@@ -121,6 +131,8 @@ class TemporalRiskEngine:
             self._in_cooldown = False
 
     def _update_state(self, ts: float, raw_risk: float):
+        # Track previous ergonomic evaluation to manage timer resets
+        # Handle cooldown first
         if self._cooldown_end_ts and ts < self._cooldown_end_ts:
             self._in_cooldown = True
             self.state = RiskState.COOLDOWN
@@ -130,10 +142,22 @@ class TemporalRiskEngine:
             self._cooldown_end_ts = None
             self.state = RiskState.NORMAL
 
+        # Determine which persistence duration to use based on ergonomic evaluation
+        # Determine persistence duration based on current ergonomic evaluation
+        # Choose persistence duration: use bad_persistence if BAD and set, otherwise default
+        persistence_needed = (
+            self.cfg.bad_persistence_duration
+            if getattr(self, "_current_eval_status", None) == "BAD" and self.cfg.bad_persistence_duration is not None
+            else self.cfg.persistence_duration
+        )
+        # If evaluation just switched to BAD, reset the risky start timestamp to start fresh
+        if getattr(self, "_current_eval_status", None) == "BAD" and getattr(self, "_prev_eval_status", None) != "BAD":
+            self._risky_start_ts = None
+
         if raw_risk >= self.cfg.risk_threshold:
             if self._risky_start_ts is not None:
                 duration = ts - self._risky_start_ts
-                if duration >= self.cfg.persistence_duration:
+                if duration >= persistence_needed:
                     self.state = RiskState.ACTIVE_RISK
                 else:
                     self.state = RiskState.WATCH if raw_risk >= self.cfg.watch_threshold else RiskState.NORMAL
@@ -141,6 +165,8 @@ class TemporalRiskEngine:
                 self._risky_start_ts = ts
                 self.state = RiskState.WATCH if raw_risk >= self.cfg.watch_threshold else RiskState.NORMAL
         else:
+            # Reset risky start when risk falls below threshold
+            self._risky_start_ts = None
             if self.state in {RiskState.ACTIVE_RISK, RiskState.WATCH, RiskState.NORMAL}:
                 if self.state != RiskState.NORMAL:
                     if self._stable_start_ts is None:
@@ -150,14 +176,15 @@ class TemporalRiskEngine:
                         stable_dur = ts - self._stable_start_ts
                         if stable_dur >= self.cfg.recovery_duration:
                             self.state = RiskState.NORMAL
-                            self._risky_start_ts = None
                             self._stable_start_ts = None
                         else:
                             self.state = RiskState.RECOVERING
             else:
-                pass
+                pass  # No action needed
 
     def _enter_cooldown(self, ts: float):
+        # Reset previous evaluation status when entering cooldown to avoid stale BAD timer
+        self._prev_eval_status = getattr(self, "_current_eval_status", None)
         self._cooldown_end_ts = ts + self.cfg.cooldown_duration
         self._in_cooldown = True
         self.state = RiskState.COOLDOWN

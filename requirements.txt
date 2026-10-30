@@ -7,7 +7,8 @@ mediapipe==0.10.33
 opencv-contrib-python==5.0.0.93
 fastapi==0.115.0
 uvicorn==0.30.6
-SQLAlchemy[asyncio]==2.0.30
+SQLAlchemy[asyncio]>=2.0.34
+psycopg==3.2.13
 pymysql==1.1.1
 aiosqlite==0.20.0
 aiomysql==0.2.0

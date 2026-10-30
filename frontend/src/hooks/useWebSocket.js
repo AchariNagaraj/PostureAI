@@ -112,6 +112,14 @@ export function useWebSocket(url = null) {
     setError(null);
   }, []);
 
+  // Helper to send JSON messages over the WebSocket
+  const sendMessage = useCallback((type, payload = {}) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      const message = { type, ...payload };
+      wsRef.current.send(JSON.stringify(message));
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -125,6 +133,7 @@ export function useWebSocket(url = null) {
     lastMessage,
     connect,
     disconnect,
+    sendMessage,
     sendFrame,
     selectTarget,
     changeTarget,

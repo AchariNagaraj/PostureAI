@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..persistence import repositories, models
-
+import time
 G_MAX = 10.0  # Maximum valid observation gap in seconds
 
 
@@ -386,7 +386,7 @@ async def get_session_analytics_list(db: AsyncSession, user_id: Optional[int] = 
         # Auto-complete inactive sessions that were left open
         if s.status == "ACTIVE":
             last_ts = metrics[-1].timestamp if metrics else s.start_timestamp
-            if (time.time() - last_ts > 60.0) or (s.id != persistence_service._current_session_id and len(sessions) > 1):
+            if time.time() - last_ts > 60.0:
                 s.status = "COMPLETED"
                 s.end_timestamp = last_ts
                 await db.commit()

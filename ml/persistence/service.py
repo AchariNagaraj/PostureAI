@@ -1,54 +1,59 @@
-# ml/persistence/service.py
 """High‑level persistence service used by the FastAPI WebSocket.
 
-The service receives the *already constructed* payload that will be sent to the
-client. It decides whether to store a regular ``POSTURE_UPDATE`` as a
-``PostureMetric`` or an ``ALERT`` as an ``Alert``. It also ensures a monitoring
-``Session`` exists – the first call creates a session (using the timestamp of
-the first payload) and subsequent calls reuse that session.
-
-Failure to persist must **not** interrupt the WebSocket stream. Errors are
-logged with ``print`` (simple for this phase) and then ignored.
+Provides explicit session lifecycle functions that rely solely on database state.
 """
 
-import asyncio
-import time
 from typing import Dict, Any
+import time
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import db, models, repositories
 
-# Global in‑memory reference to the current session id.
-_current_session_id: int | None = None
+# ---------- Session lifecycle ----------
 
-async def _get_or_create_session(db_session: AsyncSession, timestamp: float, user_id: int | None = None) -> int:
-    """Return the id of the active session, creating one if needed."""
-    global _current_session_id
-    if _current_session_id is None:
-        session = await repositories.create_session(db_session, start_ts=timestamp, user_id=user_id)
-        _current_session_id = session.id
-    return _current_session_id
+class ConflictError(Exception):
+    """Raised when a request would create a conflicting active session."""
 
-async def close_session(db_session: AsyncSession | None = None, end_timestamp: float | None = None, user_id: int | None = None):
-    """Mark the current session as completed."""
-    global _current_session_id
-    if _current_session_id is None:
-        return
-    
-    if db_session is None:
-        async with db.AsyncSessionLocal() as session:
-            await repositories.finish_session(session, _current_session_id, end_ts=end_timestamp or time.time(), user_id=user_id)
-    else:
-        await repositories.finish_session(db_session, _current_session_id, end_ts=end_timestamp or time.time(), user_id=user_id)
-        
-    _current_session_id = None
+async def start_session(user_id: int | None = None, request_id: str | None = None) -> int:
+    """Create a new ACTIVE session.
 
-async def persist_event(event_type: str, payload: Dict[str, Any], user_id: int | None = None):
-    """Persist a monitoring event."""
+    If an ACTIVE session already exists for the user, raise ConflictError.
+    """
+    async with db.AsyncSessionLocal() as session:
+        # Check for existing ACTIVE session first
+        existing = await repositories.get_active_session(session, user_id=user_id)
+        if existing:
+            raise ConflictError("Active session already exists for this user")
+        # No conflict – create new session
+        new_session = await repositories.create_session(session, start_ts=time.time(), user_id=user_id)
+        return new_session.id
+
+async def resume_session(user_id: int, session_id: int) -> int:
+    """Validate that the ACTIVE session belongs to the user and return its id."""
+    async with db.AsyncSessionLocal() as session:
+        s = await repositories.get_session_by_id(session, session_id, user_id=user_id)
+        if not s:
+            raise ValueError("Session not found or does not belong to user")
+        if s.status != "ACTIVE":
+            raise ValueError("Session is not ACTIVE")
+        return s.id
+
+async def close_session(user_id: int, session_id: int) -> None:
+    """Mark the specified session as COMPLETED. Idempotent – second calls are no‑ops."""
+    async with db.AsyncSessionLocal() as session:
+        s = await repositories.get_session_by_id(session, session_id, user_id=user_id)
+        if s and s.status != "COMPLETED":
+            await repositories.finish_session(session, session_id, end_ts=time.time(), user_id=user_id)
+
+async def persist_event(event_type: str, payload: Dict[str, Any], user_id: int | None = None, session_id: int | None = None) -> None:
+    """Persist a monitoring event for an existing ACTIVE session.
+
+    ``session_id`` must be supplied – the caller ensures the session is ACTIVE.
+    """
+    if session_id is None:
+        raise ValueError("session_id must be provided to persist_event")
     async with db.AsyncSessionLocal() as session:
         try:
-            # Ensure a session exists – use the event timestamp as start time.
-            session_id = await _get_or_create_session(session, payload.get("timestamp", time.time()), user_id=user_id)
-
             if event_type == "POSTURE_UPDATE":
                 metric = models.PostureMetric(
                     session_id=session_id,
@@ -81,4 +86,3 @@ async def persist_event(event_type: str, payload: Dict[str, Any], user_id: int |
                 await repositories.add_alert(session, alert)
         except Exception as exc:
             print(f"[persistence] failed to store {event_type}: {exc}")
-

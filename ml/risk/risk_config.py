@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Set, Dict, Any
+from typing import Optional, Set, Dict, Any
 
 @dataclasses.dataclass
 class TemporalRiskConfig:
@@ -7,9 +7,10 @@ class TemporalRiskConfig:
 
     All fields are engineering parameters and may be tuned experimentally.
     """
-    persistence_duration: float = 3.0   # seconds a risky posture must persist before alert
+    persistence_duration: float = 5.0   # seconds a risky posture must persist before alert
     recovery_duration: float = 5.0      # seconds of stable low‑risk posture before returning to NORMAL
     cooldown_duration: float = 20.0     # seconds after an alert during which no new alerts are emitted
+    bad_persistence_duration: Optional[float] = None  # Override BAD persistence, defaults to persistence_duration
     risk_mapping: Dict[str, float] = dataclasses.field(default_factory=lambda: {
         "TUP": 0.0,
         "TLB": 0.5,
