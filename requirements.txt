@@ -16,4 +16,6 @@ aiomysql==0.2.0
 websockets==17.1
 python-dotenv==1.0.1
 argon2-cffi
+itsdangerous>=2.2.0
+email-validator>=2.0.0
 
