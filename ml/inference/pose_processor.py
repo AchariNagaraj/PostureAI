@@ -2,13 +2,28 @@
 """Python-side MediaPipe Pose processor for decoding frames and extracting multi-person candidate landmarks."""
 
 import base64
+import traceback
 from pathlib import Path
 from typing import Tuple, Optional, Any, List, Dict
 import cv2
 import numpy as np
 import mediapipe as mp
 
-MODEL_TASK_PATH = Path("ml/models/pose_landmarker_lite.task")
+# Anchor model resolution to __file__ rather than process working directory (os.getcwd())
+_BASE_ML_DIR = Path(__file__).resolve().parent.parent
+
+_CANDIDATE_PATHS = [
+    _BASE_ML_DIR / "models" / "pose_landmarker_lite.task",
+    _BASE_ML_DIR.parent / "ml" / "models" / "pose_landmarker_lite.task",
+    Path("ml/models/pose_landmarker_lite.task").resolve(),
+    Path("models/pose_landmarker_lite.task").resolve(),
+]
+
+MODEL_TASK_PATH: Optional[Path] = None
+for candidate in _CANDIDATE_PATHS:
+    if candidate.is_file():
+        MODEL_TASK_PATH = candidate.resolve()
+        break
 
 
 class PoseProcessor:
@@ -17,20 +32,36 @@ class PoseProcessor:
     def __init__(self, max_poses: int = 5):
         self.landmarker = None
         self.max_poses = max_poses
-        if MODEL_TASK_PATH.is_file():
-            try:
-                base_options = mp.tasks.BaseOptions(model_asset_path=str(MODEL_TASK_PATH))
-                options = mp.tasks.vision.PoseLandmarkerOptions(
-                    base_options=base_options,
-                    running_mode=mp.tasks.vision.RunningMode.IMAGE,
-                    num_poses=self.max_poses,
-                    min_pose_detection_confidence=0.45,
-                    min_pose_presence_confidence=0.45,
-                    min_tracking_confidence=0.45,
-                )
-                self.landmarker = mp.tasks.vision.PoseLandmarker.create_from_options(options)
-            except Exception as exc:
-                print(f"[PoseProcessor] Could not initialize PoseLandmarker: {exc}")
+
+        # Explicit verification that model asset exists
+        if MODEL_TASK_PATH is None or not MODEL_TASK_PATH.is_file():
+            err_msg = (
+                f"[PoseProcessor] CRITICAL: MediaPipe model file 'pose_landmarker_lite.task' not found! "
+                f"Searched candidate locations: {[str(p) for p in _CANDIDATE_PATHS]}. "
+                "Ensure ml/models/pose_landmarker_lite.task is present in the deployment."
+            )
+            print(err_msg)
+            raise FileNotFoundError(err_msg)
+
+        resolved_model_path = str(MODEL_TASK_PATH.resolve())
+        print(f"[PoseProcessor] Model file found: {resolved_model_path}")
+
+        try:
+            base_options = mp.tasks.BaseOptions(model_asset_path=resolved_model_path)
+            options = mp.tasks.vision.PoseLandmarkerOptions(
+                base_options=base_options,
+                running_mode=mp.tasks.vision.RunningMode.IMAGE,
+                num_poses=self.max_poses,
+                min_pose_detection_confidence=0.45,
+                min_pose_presence_confidence=0.45,
+                min_tracking_confidence=0.45,
+            )
+            self.landmarker = mp.tasks.vision.PoseLandmarker.create_from_options(options)
+            print(f"[PoseProcessor] MediaPipe PoseLandmarker initialized successfully (max_poses={self.max_poses})")
+        except Exception as exc:
+            print(f"[PoseProcessor] ERROR: Failed to initialize PoseLandmarker: {exc}")
+            traceback.print_exc()
+            raise RuntimeError(f"PoseLandmarker initialization failed: {exc}") from exc
 
     def _extract_candidate_bbox(self, landmarks: List[Any]) -> Tuple[Dict[str, float], Tuple[float, float]]:
         """Calculate normalized bounding box and center coordinate for landmark set."""
