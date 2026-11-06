@@ -2,6 +2,9 @@
 """Python-side MediaPipe Pose processor for decoding frames and extracting multi-person candidate landmarks."""
 
 import base64
+import os
+import sys
+import ctypes
 import traceback
 from pathlib import Path
 from typing import Tuple, Optional, Any, List, Dict
@@ -26,12 +29,42 @@ for candidate in _CANDIDATE_PATHS:
         break
 
 
+def _preload_linux_graphics_libs():
+    """Ensure Linux shared libraries for MediaPipe (libGLESv2.so.2, libEGL.so.1) are loaded on headless Linux."""
+    if not sys.platform.startswith("linux"):
+        return
+
+    lib_dirs = [
+        _BASE_ML_DIR.parent / ".libs",
+        Path.cwd() / ".libs",
+        Path("/opt/render/project/src/.libs"),
+    ]
+    for lib_dir in lib_dirs:
+        if lib_dir.is_dir():
+            lib_dir_str = str(lib_dir.resolve())
+            current_ld = os.environ.get("LD_LIBRARY_PATH", "")
+            if lib_dir_str not in current_ld:
+                os.environ["LD_LIBRARY_PATH"] = f"{lib_dir_str}:{current_ld}"
+
+            for name_prefix in ["libglapi", "libGLdispatch", "libEGL", "libGLESv2", "libGL"]:
+                for so_file in sorted(lib_dir.glob(f"{name_prefix}*.so*")):
+                    try:
+                        ctypes.CDLL(str(so_file), mode=ctypes.RTLD_GLOBAL)
+                        print(f"[PoseProcessor] Preloaded shared library: {so_file.name}")
+                        break
+                    except Exception as e:
+                        print(f"[PoseProcessor] Notice: Failed loading {so_file.name}: {e}")
+
+
 class PoseProcessor:
     """Manages a MediaPipe PoseLandmarker instance supporting multi-person candidate detection."""
 
     def __init__(self, max_poses: int = 5):
         self.landmarker = None
         self.max_poses = max_poses
+
+        # Preload OpenGL/GLES runtime libraries if on Linux
+        _preload_linux_graphics_libs()
 
         # Explicit verification that model asset exists
         if MODEL_TASK_PATH is None or not MODEL_TASK_PATH.is_file():
